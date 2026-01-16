@@ -4,6 +4,14 @@ import { LLMService, CognitiveFunctionType } from './LLMService'
 import { RAGMemoryStore } from './RAGMemoryStore'
 import { PersonaCore } from './PersonaCore'
 import { SelfReflection } from './SelfReflection'
+import {
+  setAvatarListening,
+  setAvatarThinking,
+  setAvatarResponding,
+  setAvatarIdle,
+  setAvatarError,
+  stopLipSync,
+} from './AvatarStateManager'
 
 const log = getLogger('render/components/DeepTreeEchoBot/DeepTreeEchoBot')
 
@@ -128,11 +136,16 @@ export class DeepTreeEchoBot {
     if (!this.isEnabled()) return
 
     try {
+      // Set avatar to listening state when message is received
+      setAvatarListening()
+
       const messageText = message.text || ''
 
       // Check if this is a command
       if (messageText.startsWith('/')) {
         await this.processCommand(accountId, chatId, messageText, message)
+        // Reset avatar to idle after processing command
+        setAvatarIdle()
         return
       }
 
@@ -155,6 +168,9 @@ export class DeepTreeEchoBot {
       )
     } catch (error) {
       log.error('Error processing message:', error)
+      // Set avatar to error state
+      setAvatarError()
+      setTimeout(() => setAvatarIdle(), 3000)
     }
   }
 
@@ -585,6 +601,9 @@ I'm here to assist you with various tasks and engage in meaningful conversations
     message: any
   ): Promise<void> {
     try {
+      // Set avatar to thinking state
+      setAvatarThinking()
+
       // Get conversation context if memory is enabled
       let context: string[] = []
       if (this.options.memoryEnabled) {
@@ -615,8 +634,8 @@ I'm here to assist you with various tasks and engage in meaningful conversations
         log.info('Generated response using general processing')
       }
 
-      // Send typing indicator (simulate thinking)
-      await this.sendMessage(accountId, chatId, '*Thinking...*')
+      // Set avatar to responding state before sending
+      setAvatarResponding()
 
       // Send the response
       await this.sendMessage(accountId, chatId, response)
@@ -632,13 +651,21 @@ I'm here to assist you with various tasks and engage in meaningful conversations
       }
 
       log.info(`Sent response to chat ${chatId}`)
+
+      // Stop lip sync and return to idle after a short delay
+      setTimeout(() => {
+        stopLipSync()
+        setAvatarIdle()
+      }, 1000)
     } catch (error) {
       log.error('Error generating response:', error)
+      setAvatarError()
       await this.sendMessage(
         accountId,
         chatId,
         "I'm sorry, I had a problem generating a response. Please try again."
       )
+      setTimeout(() => setAvatarIdle(), 3000)
     }
   }
 

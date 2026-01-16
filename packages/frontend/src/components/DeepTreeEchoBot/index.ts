@@ -102,6 +102,9 @@ import DeepTreeEchoSettingsScreen from './DeepTreeEchoSettingsScreen'
 import ProactiveMessagingSettings from './ProactiveMessagingSettings'
 import TriggerManager from './TriggerManager'
 import ProactiveStatusIndicator from './ProactiveStatusIndicator'
+import { DeepTreeEchoAvatarDisplay } from './DeepTreeEchoAvatarDisplay'
+import { DeepTreeEchoAvatarProvider, useDeepTreeEchoAvatar, useDeepTreeEchoAvatarOptional, AvatarProcessingState } from './DeepTreeEchoAvatarContext'
+import type { AvatarConfig, AvatarState, AvatarContextValue } from './DeepTreeEchoAvatarContext'
 
 // Import integration functions
 import {
@@ -149,6 +152,10 @@ export {
   ProactiveMessagingSettings,
   TriggerManager,
   ProactiveStatusIndicator,
+  DeepTreeEchoAvatarDisplay,
+  DeepTreeEchoAvatarProvider,
+  useDeepTreeEchoAvatar,
+  useDeepTreeEchoAvatarOptional,
 
   // Services
   LLMService,
@@ -177,7 +184,8 @@ export {
   cleanupTestUtil,
 }
 
-export type { DeepTreeEchoBotOptions }
+export type { DeepTreeEchoBotOptions, AvatarConfig, AvatarState, AvatarContextValue }
+export { AvatarProcessingState }
 
 // Export the main component as default
 export default DeepTreeEchoBot
