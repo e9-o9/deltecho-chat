@@ -14,6 +14,7 @@ import ConfirmSendingFiles from '../dialogs/ConfirmSendingFiles'
 import { ReactionsBarProvider } from '../ReactionsBar'
 import useDialog from '../../hooks/dialog/useDialog'
 import useMessage from '../../hooks/chat/useMessage'
+import { DeepTreeEchoAvatarDisplay } from '../DeepTreeEchoBot/DeepTreeEchoAvatarDisplay'
 
 const log = getLogger('renderer/MessageListAndComposer')
 
@@ -300,6 +301,10 @@ export default function MessageListAndComposer({ accountId, chat }: Props) {
     ? getBackgroundImageStyle(settingsStore.desktopSettings)
     : {}
 
+  // Check if Deep Tree Echo avatar is enabled
+  const isAvatarEnabled = settingsStore?.desktopSettings?.deepTreeEchoBotEnabled && 
+    settingsStore?.desktopSettings?.deepTreeEchoBotAvatarEnabled !== false
+
   return (
     <div
       role='tabpanel'
@@ -348,6 +353,9 @@ export default function MessageListAndComposer({ accountId, chat }: Props) {
           clearDraftStateButKeepTextareaValue
         }
       />
+      {isAvatarEnabled && (
+        <DeepTreeEchoAvatarDisplay position="floating" />
+      )}
     </div>
   )
 }
