@@ -36,9 +36,11 @@ export async function openAttachmentInShell(msg: Type.Message) {
     throw new Error('message has no file to open')
   }
   const tmpFile = await runtime.copyFileToInternalTmpDir(msg.fileName, msg.file)
-  if (!runtime.openPath(tmpFile)) {
+  const openError = await runtime.openPath(tmpFile)
+  if (openError) {
     log.info(
-      "file couldn't be opened, try saving it in a different place and try to open it from there"
+      "file couldn't be opened, try saving it in a different place and try to open it from there",
+      { error: openError }
     )
   }
 }

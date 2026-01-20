@@ -150,8 +150,11 @@ class BrowserRuntime implements Runtime {
 
   // #endregion
 
-  openMapsWebxdc(_accountId: number, _chatId?: number | undefined): void {
-    throw new Error('Method not implemented.')
+  openMapsWebxdc(accountId: number, chatId?: number | undefined): void {
+    this.log.warn('openMapsWebxdc is not supported in browser runtime', {
+      accountId,
+      chatId,
+    })
   }
 
   emitUIFullyReady(): void {
@@ -173,25 +176,87 @@ class BrowserRuntime implements Runtime {
     return new BrowserDeltachat(callCounterFunction)
   }
   openMessageHTML(
-    _accountId: number,
-    _message_id: number,
+    accountId: number,
+    messageId: number,
     _isContactRequest: boolean,
-    _subject: string,
-    _sender: string,
-    _receiveTime: string,
-    _content: string
+    subject: string,
+    sender: string,
+    receiveTime: string,
+    content: string
   ): void {
-    throw new Error('Method not implemented.')
+    const popup = window.open('', '_blank')
+    if (!popup) {
+      this.log.warn('openMessageHTML popup blocked', {
+        accountId,
+        messageId,
+      })
+      return
+    }
+
+    popup.opener = null
+
+    const doc = popup.document
+    doc.open()
+    doc.write(
+      '<!doctype html><html><head><meta charset="utf-8"></head><body></body></html>'
+    )
+    doc.close()
+    doc.title = subject || sender || 'Delta Chat'
+
+    const body = doc.body
+    body.style.margin = '0'
+    body.style.background = '#f3f4f6'
+    body.style.fontFamily =
+      'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif'
+
+    const container = doc.createElement('div')
+    container.style.display = 'flex'
+    container.style.flexDirection = 'column'
+    container.style.height = '100vh'
+
+    const header = doc.createElement('div')
+    header.style.padding = '16px'
+    header.style.background = '#ffffff'
+    header.style.borderBottom = '1px solid #e5e7eb'
+
+    if (subject) {
+      const subjectLine = doc.createElement('div')
+      subjectLine.textContent = subject
+      subjectLine.style.fontSize = '18px'
+      subjectLine.style.fontWeight = '600'
+      subjectLine.style.marginBottom = '6px'
+      header.appendChild(subjectLine)
+    }
+
+    const metaLine = doc.createElement('div')
+    const metaParts: string[] = []
+    if (sender) metaParts.push(sender)
+    if (receiveTime) metaParts.push(receiveTime)
+    metaLine.textContent = metaParts.join(' - ')
+    metaLine.style.fontSize = '12px'
+    metaLine.style.color = '#6b7280'
+    header.appendChild(metaLine)
+
+    const frame = doc.createElement('iframe')
+    frame.setAttribute('sandbox', 'allow-same-origin')
+    frame.style.border = '0'
+    frame.style.flex = '1'
+    frame.style.width = '100%'
+    frame.srcdoc = content || ''
+
+    container.appendChild(header)
+    container.appendChild(frame)
+    body.appendChild(container)
   }
   notifyWebxdcStatusUpdate(_accountId: number, _instanceId: number): void {
-    this.log.critical('Method not implemented.')
+    this.log.debug('notifyWebxdcStatusUpdate ignored in browser runtime')
   }
   notifyWebxdcRealtimeData(
     _accountId: number,
     _instanceId: number,
     _payload: number[]
   ): void {
-    this.log.critical('Method not implemented.')
+    this.log.debug('notifyWebxdcRealtimeData ignored in browser runtime')
   }
   notifyWebxdcMessageChanged(accountId: number, instanceId: number): void {
     // This method is called when webxdc status updates, but we don't need to do anything critical in browser runtime for now
@@ -204,7 +269,7 @@ class BrowserRuntime implements Runtime {
     return ''
   }
   notifyWebxdcInstanceDeleted(_accountId: number, _instanceId: number): void {
-    this.log.critical('Method not implemented.')
+    this.log.debug('notifyWebxdcInstanceDeleted ignored in browser runtime')
   }
   async saveBackgroundImage(
     file: string,
@@ -355,10 +420,14 @@ class BrowserRuntime implements Runtime {
     ).path
   }
   async copyFileToInternalTmpDir(
-    _fileName: string,
-    _sourcePath: string
+    fileName: string,
+    sourcePath: string
   ): Promise<string> {
-    throw new Error('Method not implemented')
+    this.log.debug(
+      'copyFileToInternalTmpDir not supported in browser runtime',
+      { fileName }
+    )
+    return sourcePath
   }
   async removeTempFile(name: string): Promise<void> {
     await fetch(`/backend-api/removeTempFile`, {
@@ -497,10 +566,10 @@ class BrowserRuntime implements Runtime {
     return Promise.resolve()
   }
   closeAllWebxdcInstances(): void {
-    this.log.critical('Method not implemented.')
+    this.log.debug('closeAllWebxdcInstances ignored in browser runtime')
   }
   restartApp(): void {
-    this.log.critical('Method not implemented.')
+    this.log.warn('restartApp is not supported in browser runtime')
   }
   private runtime_info: RuntimeInfo | null = null
   getRuntimeInfo(): RuntimeInfo {
@@ -521,18 +590,39 @@ class BrowserRuntime implements Runtime {
     return config
   }
 
-  openWebxdc(_msgId: number, _params: DcOpenWebxdcParameters): void {
-    throw new Error('Method not implemented.')
+  openWebxdc(msgId: number, params: DcOpenWebxdcParameters): void {
+    if (params.href) {
+      const opened = window.open(params.href, '_blank')
+      if (opened) {
+        opened.focus()
+        return
+      }
+      this.log.warn('openWebxdc popup blocked', {
+        msgId,
+        href: params.href,
+      })
+      return
+    }
+    this.log.warn('openWebxdc is not supported in browser runtime', {
+      msgId,
+      webxdcInfo: params.webxdcInfo,
+    })
   }
   async openPath(path: string): Promise<string> {
     if (path.includes('dc.db-blobs')) {
-      window.open(this.transformBlobURL(path), '_blank')?.focus()
-      return ''
-    } else {
-      throw new Error(
-        'Browser does not support opening urls outside of blob directory'
-      )
+      const opened = window.open(this.transformBlobURL(path), '_blank')
+      if (opened) {
+        opened.focus()
+        return ''
+      }
+      const message = 'Browser blocked opening the file in a new tab'
+      this.log.warn(message, { path })
+      return message
     }
+    const message =
+      'Browser does not support opening urls outside of blob directory'
+    this.log.warn(message, { path })
+    return message
   }
   async getAppPath(_name: string): Promise<string> {
     this.log.critical('Method not implemented.')
@@ -768,7 +858,7 @@ class BrowserRuntime implements Runtime {
     }
   }
   openLogFile(): void {
-    throw new Error('Method not implemented.')
+    this.log.warn('openLogFile is not supported in browser runtime')
   }
   getCurrentLogLocation(): string {
     return 'not implemented.'
